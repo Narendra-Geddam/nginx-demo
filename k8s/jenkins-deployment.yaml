@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: nginx-demo
-        image: registry.iximiuz.com/nginx-demo:latest
+        image: newimage
         ports:
         - containerPort: 80
 
