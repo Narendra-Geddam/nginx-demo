@@ -6,7 +6,7 @@ pipeline {
     string(name: 'IMAGE_REPOSITORY', defaultValue: 'privatergistry/nginx-demo', description: 'Docker image repo (ex: user/nginx-demo)')
     string(name: 'IMAGE_TAG', defaultValue: '', description: 'Leave empty to use BUILD_NUMBER')
     string(name: 'RELEASE_NAME', defaultValue: 'nginx-demo', description: 'Helm release')
-    string(name: 'K8S_NAMESPACE', defaultValue: 'jenkins', description: 'K8s namespace')
+    string(name: 'K8S_NAMESPACE', defaultValue: 'dev', description: 'K8s namespace')
     string(name: 'HELM_CHART_PATH', defaultValue: 'helm/nginx-demo', description: 'Helm chart path')
   }
 
