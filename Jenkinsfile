@@ -93,8 +93,7 @@ spec:
                 helm upgrade --install "${RELEASE_NAME}" "${HELM_CHART_PATH}" \
                   --namespace "${K8S_NAMESPACE}" \
                   --set image.repository="${IMAGE_REPOSITORY}" \
-                  --set image.tag="${IMAGE_TAG}" \
-                  --wait --timeout 5m
+                  --set image.tag="${IMAGE_TAG}"
               '''
             }
           }
