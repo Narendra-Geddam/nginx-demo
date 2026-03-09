@@ -2,6 +2,7 @@ pipeline {
   agent none
 
   options {
+    skipDefaultCheckout()
     disableConcurrentBuilds()
     buildDiscarder(logRotator(numToKeepStr: '20'))
   }
@@ -18,6 +19,10 @@ pipeline {
   environment {
     REGISTRY_CREDENTIALS_ID = 'dockerhub-creds'
     EFFECTIVE_TAG = ''
+    IMAGE_REPOSITORY = ''
+    RELEASE_NAME = ''
+    K8S_NAMESPACE = ''
+    HELM_CHART_PATH = ''
   }
 
   stages {
@@ -27,6 +32,10 @@ pipeline {
         git branch: "${params.BRANCH}", url: 'https://github.com/Narendra-Geddam/nginx-demo.git'
         script {
           env.EFFECTIVE_TAG = params.IMAGE_TAG?.trim() ? params.IMAGE_TAG.trim() : env.BUILD_NUMBER
+          env.IMAGE_REPOSITORY = params.IMAGE_REPOSITORY?.trim()
+          env.RELEASE_NAME = params.RELEASE_NAME?.trim()
+          env.K8S_NAMESPACE = params.K8S_NAMESPACE?.trim()
+          env.HELM_CHART_PATH = params.HELM_CHART_PATH?.trim()
         }
       }
     }
