@@ -1,0 +1,49 @@
+controller:
+  admin:
+    username: admin
+    password: admin123
+
+  numExecutors: 0
+
+  serviceType: NodePort
+
+  servicePort: 8080
+  nodePorts:
+    http: 32000
+
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostName: jenkins.local
+    path: /
+    pathType: Prefix
+
+  installPlugins:
+    - kubernetes
+    - git
+    - workflow-aggregator
+    - blueocean
+    - docker-workflow
+    - configuration-as-code
+    - pipeline-stage-view
+    - credentials-binding
+    - job-dsl
+
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 10Gi
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+
+agent:
+  enabled: true
+
+rbac:
+  create: true

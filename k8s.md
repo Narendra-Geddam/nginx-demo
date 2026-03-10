@@ -23,6 +23,7 @@ Minimal lab setup (cleaned):
 │       ├── deployment.yaml
 │       └── service.yaml
 └── k8s/
+    ├── jenkins-values.yaml
     ├── jenkins-serviceaccount.yaml
     ├── jenkins-deployment.yaml
     └── jenkins-helm-cluster-rbac.yaml
@@ -30,14 +31,67 @@ Minimal lab setup (cleaned):
 
 ---
 
-## 1) Install Jenkins
+## 1) Install Local Path Provisioner and Set Default StorageClass
+
+Install local-path provisioner:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+```
+
+Mark `local-path` as default StorageClass:
+
+```bash
+kubectl patch storageclass local-path \
+  -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+```
+
+Verify:
+
+```bash
+kubectl get storageclass
+```
+
+You should see `local-path` with `(default)`.
+
+---
+
+## 2) Install Jenkins
 
 ```bash
 helm repo add jenkins https://charts.jenkins.io
 helm repo update
 
 kubectl create namespace jenkins --dry-run=client -o yaml | kubectl apply -f -
+```
 
+### Option A: Install with local values file (recommended)
+
+Use repo file: `k8s/jenkins-values.yaml`
+
+```bash
+helm upgrade --install jenkins jenkins/jenkins \
+  -n jenkins \
+  -f k8s/jenkins-values.yaml
+```
+
+This values file sets:
+- Jenkins Service type `NodePort`
+- Jenkins NodePort HTTP `32000`
+- Jenkins ingress enabled with host `jenkins.local` (class `nginx`)
+- Persistence enabled with `local-path` StorageClass and `10Gi`
+
+If you are already inside folder containing this file, the command is:
+
+```bash
+helm upgrade --install jenkins jenkins/jenkins \
+  -n jenkins \
+  -f values.yaml
+```
+
+### Option B: Inline set (quick)
+
+```bash
 helm upgrade --install jenkins jenkins/jenkins \
   -n jenkins \
   --set controller.serviceType=NodePort
@@ -48,11 +102,12 @@ Verify:
 ```bash
 kubectl get pods -n jenkins
 kubectl get svc -n jenkins
+kubectl get ingress -n jenkins
 ```
 
 ---
 
-## 2) Apply Jenkins RBAC
+## 3) Apply Jenkins RBAC
 
 ```bash
 kubectl apply -f k8s/jenkins-serviceaccount.yaml
@@ -69,7 +124,7 @@ Expected: `yes`
 
 ---
 
-## 3) Jenkins Pipeline Parameters
+## 4) Jenkins Pipeline Parameters
 
 - `BRANCH` (default: `main`)
 - `IMAGE_REPOSITORY` (default: `privatergistry/nginx-demo`)
@@ -80,7 +135,7 @@ Expected: `yes`
 
 ---
 
-## 4) Current App Exposure
+## 5) Current App Exposure
 
 Helm chart defaults:
 - `service.type: NodePort`
@@ -92,7 +147,7 @@ No ingress resource is created in this cleaned lab setup.
 
 ---
 
-## 5) Validate Deployment
+## 6) Validate Deployment
 
 ```bash
 kubectl get deploy,po,svc -n dev
@@ -108,7 +163,7 @@ http://<NODE_IP>:30081
 
 ---
 
-## 6) Troubleshooting
+## 7) Troubleshooting
 
 ### Pod fails with permission errors on NGINX temp/cache dirs
 Use the current Dockerfile base image:
@@ -118,12 +173,17 @@ Use the current Dockerfile base image:
 Re-apply:
 - `k8s/jenkins-helm-cluster-rbac.yaml`
 
+### Jenkins UI Access
+- Direct NodePort: `http://<NODE_IP>:32000`
+- Ingress (if DNS/hosts configured): `http://jenkins.local`
+
 ---
 
-## 7) Quick Checklist
+## 8) Quick Checklist
 
 1. `dockerhub-creds` exists in Jenkins.
 2. Jenkins SA exists in `jenkins` namespace.
-3. Cluster RBAC applied.
-4. Pipeline completed successfully.
-5. `kubectl get svc -n dev` shows `NodePort` `30081`.
+3. `local-path` StorageClass is default.
+4. Cluster RBAC applied.
+5. Pipeline completed successfully.
+6. `kubectl get svc -n dev` shows `NodePort` `30081`.
