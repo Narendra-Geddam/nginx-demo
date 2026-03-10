@@ -36,7 +36,7 @@ spec:
         container('kaniko') {
           withCredentials([usernamePassword(credentialsId: env.REGISTRY_CREDENTIALS_ID, usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
             sh '''
-              IMAGE_TAG="${PARAM_IMAGE_TAG:-$BUILD_NUMBER}"
+              IMAGE_TAG="${IMAGE_TAG_PARAM:-$BUILD_NUMBER}"
               [ -z "$IMAGE_TAG" ] && IMAGE_TAG=latest
 
               mkdir -p /kaniko/.docker
@@ -48,15 +48,15 @@ EOF
               /kaniko/executor \
                 --context "$PWD" \
                 --dockerfile "$PWD/Dockerfile" \
-                --destination "${PARAM_IMAGE_REPOSITORY}:${IMAGE_TAG}" \
-                --destination "${PARAM_IMAGE_REPOSITORY}:latest"
+                --destination "${IMAGE_REPOSITORY_PARAM}:${IMAGE_TAG}" \
+                --destination "${IMAGE_REPOSITORY_PARAM}:latest"
             '''
           }
         }
       }
       environment {
-        PARAM_IMAGE_REPOSITORY = "${params.IMAGE_REPOSITORY}"
-        PARAM_IMAGE_TAG = "${params.IMAGE_TAG}"
+        IMAGE_REPOSITORY_PARAM = "${params.IMAGE_REPOSITORY}"
+        IMAGE_TAG_PARAM = "${params.IMAGE_TAG}"
       }
     }
 
@@ -80,22 +80,22 @@ spec:
         git branch: "${params.BRANCH}", url: 'https://github.com/Narendra-Geddam/nginx-demo.git'
         container('helm') {
           sh '''
-            IMAGE_TAG="${PARAM_IMAGE_TAG:-$BUILD_NUMBER}"
+            IMAGE_TAG="${IMAGE_TAG_PARAM:-$BUILD_NUMBER}"
             [ -z "$IMAGE_TAG" ] && IMAGE_TAG=latest
 
-            helm upgrade --install "${PARAM_RELEASE_NAME}" "${PARAM_HELM_CHART_PATH}" \
-              --namespace "${PARAM_K8S_NAMESPACE}" \
-              --set image.repository="${PARAM_IMAGE_REPOSITORY}" \
+            helm upgrade --install "${RELEASE_NAME_PARAM}" "${HELM_CHART_PATH_PARAM}" \
+              --namespace "${K8S_NAMESPACE_PARAM}" \
+              --set image.repository="${IMAGE_REPOSITORY_PARAM}" \
               --set image.tag="${IMAGE_TAG}"
           '''
         }
       }
       environment {
-        PARAM_IMAGE_REPOSITORY = "${params.IMAGE_REPOSITORY}"
-        PARAM_IMAGE_TAG = "${params.IMAGE_TAG}"
-        PARAM_RELEASE_NAME = "${params.RELEASE_NAME}"
-        PARAM_K8S_NAMESPACE = "${params.K8S_NAMESPACE}"
-        PARAM_HELM_CHART_PATH = "${params.HELM_CHART_PATH}"
+        IMAGE_REPOSITORY_PARAM = "${params.IMAGE_REPOSITORY}"
+        IMAGE_TAG_PARAM = "${params.IMAGE_TAG}"
+        RELEASE_NAME_PARAM = "${params.RELEASE_NAME}"
+        K8S_NAMESPACE_PARAM = "${params.K8S_NAMESPACE}"
+        HELM_CHART_PATH_PARAM = "${params.HELM_CHART_PATH}"
       }
     }
   }

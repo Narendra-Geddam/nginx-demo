@@ -31,11 +31,3 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/name: {{ include "nginx-demo.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
-
-{{- define "nginx-demo.serviceAccountName" -}}
-{{- if .Values.serviceAccount.create -}}
-{{- default (include "nginx-demo.fullname" .) .Values.serviceAccount.name -}}
-{{- else -}}
-{{- default "default" .Values.serviceAccount.name -}}
-{{- end -}}
-{{- end -}}
