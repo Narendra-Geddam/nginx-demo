@@ -70,14 +70,21 @@ pipeline {
           rm -f kubeconfig-tunnel-*.yaml || true
 
           JENKINS_ROOT="${JENKINS_HOME:-/var/lib/jenkins}"
-          INFRA_ARCHIVE_DIR="${JENKINS_ROOT}/jobs/${INFRA_JOB_NAME}/builds/lastSuccessfulBuild/archive/ansible/artifacts"
+          SEARCH_ROOT="${JENKINS_ROOT}/jobs"
+          CANDIDATE="$(
+            find "${SEARCH_ROOT}" -type f -name 'kubeconfig-tunnel-*.yaml' \
+              -path "*/jobs/${INFRA_JOB_NAME}/builds/*/archive/*" 2>/dev/null \
+              | xargs -r ls -1t 2>/dev/null \
+              | head -n1
+          )"
 
-          if [ ! -d "${INFRA_ARCHIVE_DIR}" ]; then
-            echo "Infra archive directory not found: ${INFRA_ARCHIVE_DIR}"
+          if [ -z "${CANDIDATE}" ]; then
+            echo "Could not find kubeconfig artifact for job '${INFRA_JOB_NAME}' under ${SEARCH_ROOT}"
             exit 1
           fi
 
-          cp "${INFRA_ARCHIVE_DIR}"/kubeconfig-tunnel-*.yaml .
+          cp "${CANDIDATE}" .
+          echo "Copied kubeconfig artifact from: ${CANDIDATE}"
         '''
         script {
           env.KUBECONFIG_FILE = sh(
