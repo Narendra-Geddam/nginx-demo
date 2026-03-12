@@ -8,7 +8,7 @@ pipeline {
   }
 
   parameters {
-    string(name: 'KUBECONFIG_CREDENTIALS_ID', defaultValue: 'minikube-kubeconfig', description: 'Jenkins Secret file credential ID that contains kubeconfig')
+    string(name: 'INFRA_JOB_NAME', defaultValue: 'Infra-Pipeline', description: 'Infra pipeline job that publishes kubeconfig artifact')
     string(name: 'SSH_CREDENTIALS_ID', defaultValue: 'ssh-private-key', description: 'Jenkins Secret file credential ID for EC2 SSH private key')
     string(name: 'DOCKER_CREDENTIALS_ID', defaultValue: 'dockerhub-creds', description: 'Jenkins username/password credentials ID for Docker Hub')
     string(name: 'IMAGE_REPOSITORY', defaultValue: 'privatergistry/nginx-demo', description: 'Docker image repository')
@@ -63,17 +63,50 @@ pipeline {
       }
     }
 
+    stage('Fetch Tunnel Kubeconfig') {
+      steps {
+        sh '''
+          set -eu
+          rm -f kubeconfig-tunnel-*.yaml || true
+
+          JENKINS_ROOT="${JENKINS_HOME:-/var/lib/jenkins}"
+          INFRA_ARCHIVE_DIR="${JENKINS_ROOT}/jobs/${INFRA_JOB_NAME}/builds/lastSuccessfulBuild/archive/ansible/artifacts"
+
+          if [ ! -d "${INFRA_ARCHIVE_DIR}" ]; then
+            echo "Infra archive directory not found: ${INFRA_ARCHIVE_DIR}"
+            exit 1
+          fi
+
+          cp "${INFRA_ARCHIVE_DIR}"/kubeconfig-tunnel-*.yaml .
+        '''
+        script {
+          env.KUBECONFIG_FILE = sh(
+            script: "ls -1t kubeconfig-tunnel-*.yaml | head -n1",
+            returnStdout: true
+          ).trim()
+
+          if (!env.KUBECONFIG_FILE) {
+            error('Tunnel kubeconfig artifact not found')
+          }
+
+          def m = (env.KUBECONFIG_FILE =~ /kubeconfig-tunnel-(.+)\\.yaml/)
+          if (!m) {
+            error("Unable to extract EC2 public IP from filename: ${env.KUBECONFIG_FILE}")
+          }
+
+          env.EC2_PUBLIC_IP = m[0][1]
+          echo "Using kubeconfig artifact: ${env.KUBECONFIG_FILE}"
+          echo "Resolved EC2 public IP: ${env.EC2_PUBLIC_IP}"
+        }
+      }
+    }
+
     stage('Setup API Tunnel') {
       steps {
-        withCredentials([
-          file(credentialsId: params.KUBECONFIG_CREDENTIALS_ID, variable: 'KCFG'),
-          file(credentialsId: params.SSH_CREDENTIALS_ID, variable: 'SSH_KEY_FILE')
-        ]) {
+        withCredentials([file(credentialsId: params.SSH_CREDENTIALS_ID, variable: 'SSH_KEY_FILE')]) {
           sh '''
             set -eu
-            cp "${KCFG}" kubeconfig-tunnel.yaml
 
-            EC2_PUBLIC_IP="$(awk '/server: https:\\/\\//{gsub("https://","",$2); split($2,a,":"); print a[1]; exit}' kubeconfig-tunnel.yaml)"
             if [ -z "${EC2_PUBLIC_IP}" ]; then
               echo "EC2_PUBLIC_IP is empty"
               exit 1
@@ -117,13 +150,9 @@ pipeline {
               exit 1
             fi
 
-            sed -i 's#server: https://.*:8443#server: https://127.0.0.1:8443#' kubeconfig-tunnel.yaml
             curl -sk --max-time 10 https://127.0.0.1:8443/version >/dev/null
             echo "Tunnel ready: 127.0.0.1:8443 -> ${MINIKUBE_IP}:8443 via ${EC2_PUBLIC_IP}"
           '''
-          script {
-            env.KUBECONFIG_FILE = 'kubeconfig-tunnel.yaml'
-          }
         }
       }
     }
@@ -168,7 +197,7 @@ pipeline {
           fi
         fi
       '''
-      archiveArtifacts artifacts: 'kubeconfig-tunnel.yaml,.minikube_tunnel*', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'kubeconfig-tunnel-*.yaml,.minikube_tunnel*', allowEmptyArchive: true
     }
     success {
       echo 'Deployment to Minikube completed successfully.'
