@@ -65,14 +65,20 @@ pipeline {
 
     stage('Fetch Tunnel Kubeconfig') {
       steps {
-        sh 'rm -f kubeconfig-tunnel-*.yaml || true'
-        copyArtifacts(
-          projectName: params.INFRA_JOB_NAME,
-          selector: [$class: 'StatusBuildSelector', stable: false],
-          filter: 'ansible/artifacts/kubeconfig-tunnel-*.yaml',
-          flatten: true,
-          optional: false
-        )
+        sh '''
+          set -eu
+          rm -f kubeconfig-tunnel-*.yaml || true
+
+          JENKINS_ROOT="${JENKINS_HOME:-/var/lib/jenkins}"
+          INFRA_ARCHIVE_DIR="${JENKINS_ROOT}/jobs/${INFRA_JOB_NAME}/builds/lastSuccessfulBuild/archive/ansible/artifacts"
+
+          if [ ! -d "${INFRA_ARCHIVE_DIR}" ]; then
+            echo "Infra archive directory not found: ${INFRA_ARCHIVE_DIR}"
+            exit 1
+          fi
+
+          cp "${INFRA_ARCHIVE_DIR}"/kubeconfig-tunnel-*.yaml .
+        '''
         script {
           env.KUBECONFIG_FILE = sh(
             script: "ls -1t kubeconfig-tunnel-*.yaml | head -n1",
