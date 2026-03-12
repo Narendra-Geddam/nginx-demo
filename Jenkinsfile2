@@ -68,7 +68,7 @@ pipeline {
         sh 'rm -f kubeconfig-tunnel-*.yaml || true'
         copyArtifacts(
           projectName: params.INFRA_JOB_NAME,
-          selector: lastSuccessful(),
+          selector: [$class: 'StatusBuildSelector', stable: false],
           filter: 'ansible/artifacts/kubeconfig-tunnel-*.yaml',
           flatten: true,
           optional: false
