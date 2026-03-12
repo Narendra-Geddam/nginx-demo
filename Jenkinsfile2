@@ -9,7 +9,7 @@ pipeline {
   parameters {
     string(name: 'KUBECONFIG_CREDENTIALS_ID', defaultValue: 'minikube-kubeconfig', description: 'Jenkins Secret file credential ID that contains kubeconfig')
     string(name: 'DOCKER_CREDENTIALS_ID', defaultValue: 'dockerhub-creds', description: 'Jenkins username/password credentials ID for Docker Hub')
-    string(name: 'IMAGE_REPOSITORY', defaultValue: '', description: 'Docker image repository (leave empty to use <dockerhub-username>/nginx-demo)')
+    string(name: 'IMAGE_REPOSITORY', defaultValue: 'privatergistry/nginx-demo', description: 'Docker image repository')
     string(name: 'IMAGE_TAG', defaultValue: '', description: 'Docker image tag (leave empty to use BUILD_NUMBER)')
     string(name: 'RELEASE_NAME', defaultValue: 'nginx-demo', description: 'Helm release name')
     string(name: 'K8S_NAMESPACE', defaultValue: 'dev', description: 'Kubernetes namespace')
